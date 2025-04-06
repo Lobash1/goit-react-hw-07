@@ -1,18 +1,47 @@
 import Contact from "../Contact/Contact";
 import css from "./ContactList.module.css";
 import { useDispatch, useSelector } from "react-redux";
-import { deleteContact } from "../../redux/contactsSlice";
+import { deleteContact } from "../../redux/contactsOps";
+import {
+  selectContacts,
+  selectLoading,
+  selectError,
+} from "../../redux/contactsSlice";
+import { selectNameFilter } from "../../redux/filtersSlice";
+import iziToast from "izitoast";
 
 export default function ContactList() {
-  const contacts = useSelector((state) => state.contacts.items); // Беремо контакти з Redux
-  const filter = useSelector((state) => state.filters.name);
+  const dispatch = useDispatch();
 
-  // Фільтрація контактів по імені
+  const contacts = useSelector(selectContacts);
+  const filter = useSelector(selectNameFilter);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+
+  // Фільтрація контактів
   const visibleContacts = contacts.filter((contact) =>
     contact.name.toLowerCase().includes(filter.toLowerCase())
   );
 
-  const dispatch = useDispatch();
+  const handleDelete = async (id, name) => {
+    try {
+      await dispatch(deleteContact(id)).unwrap();
+      iziToast.success({
+        title: "Deleted",
+        message: `Contact ${name} deleted`,
+        position: "topRight",
+      });
+    } catch (err) {
+      iziToast.error({
+        title: "Error",
+        message: `Failed to delete ${name}: ${err.message}`,
+        position: "topRight",
+      });
+    }
+  };
+
+  if (loading) return <p>Loading contacts...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   return (
     <ul className={css.list}>
@@ -20,7 +49,7 @@ export default function ContactList() {
         <Contact
           key={contact.id}
           user={contact}
-          onDelete={() => dispatch(deleteContact(contact.id))} // Передаємо функцію видалення
+          onDelete={() => handleDelete(contact.id, contact.name)}
         />
       ))}
     </ul>

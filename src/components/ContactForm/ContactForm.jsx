@@ -1,16 +1,16 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import css from "./ContactForm.module.css";
 import * as Yup from "yup";
-import { nanoid } from "nanoid";
 import { useDispatch, useSelector } from "react-redux";
-import { addContact } from "../../redux/contactsSlice";
+import { addContact } from "../../redux/contactsOps";
+import { selectContacts } from "../../redux/contactsSlice";
+import iziToast from "izitoast";
 
 const FeedbackSchema = Yup.object().shape({
   name: Yup.string()
     .min(3, "Too Short!")
     .max(50, "Too Long!")
     .required("Required"),
-
   number: Yup.string()
     .matches(
       /^[0-9]{3}-[0-9]{2}-[0-9]{2}$/,
@@ -18,7 +18,7 @@ const FeedbackSchema = Yup.object().shape({
     )
     .required("Required"),
 });
-// Початкові значення форми
+
 const initialValues = {
   name: "",
   number: "",
@@ -26,21 +26,37 @@ const initialValues = {
 
 export default function ContactForm() {
   const dispatch = useDispatch();
-  const contacts = useSelector((state) => state.contacts.items);
+  const contacts = useSelector(selectContacts);
 
-  const handleSubmit = (values, actions) => {
+  const handleSubmit = async (values, actions) => {
     const isDuplicate = contacts.some(
-      (contacts) => contacts.name.toLowerCase() === values.name.toLowerCase()
+      (contact) => contact.name.toLowerCase() === values.name.toLowerCase()
     );
 
     if (isDuplicate) {
-      alert(`${values.name} is already in contacts!`);
+      iziToast.warning({
+        title: "Warning",
+        message: `${values.name} is already in contacts!`,
+        position: "topRight",
+      });
       return;
     }
 
-    const newContact = { ...values, id: nanoid() };
-    dispatch(addContact(newContact)); // Додаємо контакт у Redux
-    actions.resetForm(); // Очищаємо форму
+    try {
+      await dispatch(addContact(values)).unwrap();
+      iziToast.success({
+        title: "Success",
+        message: `Contact ${values.name} added successfully!`,
+        position: "topRight",
+      });
+      actions.resetForm();
+    } catch (error) {
+      iziToast.error({
+        title: "Error",
+        message: `Failed to add contact: ${error.message}`,
+        position: "topRight",
+      });
+    }
   };
 
   return (
@@ -54,21 +70,13 @@ export default function ContactForm() {
           Name
         </label>
         <Field className={css.input} id="name" name="name" type="text" />
-        <ErrorMessage
-          className={css.error}
-          name="name"
-          component="span"
-        ></ErrorMessage>
+        <ErrorMessage className={css.error} name="name" component="span" />
 
         <label className={css.label} htmlFor="number">
           Number
         </label>
         <Field className={css.input} id="number" name="number" type="text" />
-        <ErrorMessage
-          className={css.error}
-          name="number"
-          component="span"
-        ></ErrorMessage>
+        <ErrorMessage className={css.error} name="number" component="span" />
 
         <button className={css.button} type="submit">
           Add contact

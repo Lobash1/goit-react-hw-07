@@ -4,7 +4,7 @@ import { setFilter } from "../../redux/filtersSlice";
 
 export default function SearchBox() {
   const dispatch = useDispatch();
-  const filter = useSelector((state) => state.filters.name); // Отримуємо поточний фільтр з Redux
+  const filter = useSelector((state) => state.filters.name);
 
   return (
     <div className={css.search}>
